@@ -7,6 +7,7 @@ import (
 	database "github.com/Cacutss/blog-aggregator/internal/database"
 	"github.com/google/uuid"
 	"log"
+	"os"
 	"time"
 )
 
@@ -43,9 +44,35 @@ func HandlerRegister(s *config.State, cmd Command) error {
 		UpdatedAt: time.Now(),
 		Name:      cmd.Args[1],
 	}
-	i, err := s.Db.CreateUser(context.Background(), params)
+	_, err := s.Db.CreateUser(context.Background(), params)
 	if err != nil {
-		log.Fatal("User already exists", err, i)
+		log.Fatal("User already exists")
+	}
+	HandlerLogin(s, cmd)
+	return nil
+}
+
+func HandlerReset(s *config.State, cmd Command) error {
+	err := s.Db.DeleteUsers(context.Background())
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Println("Users table resetted.")
+	os.Exit(0)
+	return nil
+}
+
+func HandlerUsers(s *config.State, cmd Command) error {
+	users, err := s.Db.GetUsers(context.Background())
+	if err != nil {
+		return fmt.Errorf("%w", err)
+	}
+	for _, v := range users {
+		fmt.Print(v.Name)
+		if v.Name == s.Config.User {
+			fmt.Print(" (current)")
+		}
+		fmt.Println("")
 	}
 	return nil
 }
@@ -60,5 +87,7 @@ func GetCommands() Commands {
 	}
 	Result.register("login", HandlerLogin)
 	Result.register("register", HandlerRegister)
+	Result.register("reset", HandlerReset)
+	Result.register("users", HandlerUsers)
 	return Result
 }
