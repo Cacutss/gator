@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	database "github.com/Cacutss/blog-aggregator/internal/database"
-	"log"
+	"github.com/google/uuid"
 	"os"
 )
 
@@ -12,18 +12,25 @@ const (
 	configpath = "/.gatorconfig.json"
 )
 
+type User struct {
+	Name string    `json:"name"`
+	ID   uuid.UUID `json:"id"`
+}
+
 type Config struct {
-	User  string `json:"current_user_name"`
+	User  User   `json:"current_user"`
 	Dburl string `json:"db_url"`
 }
 
 type State struct {
 	Config *Config
+	User   database.User
 	Db     *database.Queries
 }
 
-func (c *Config) SetUser(user string) error {
-	c.User = user
+func (c *Config) SetUser(user User) error {
+	c.User.Name = user.Name
+	c.User.ID = user.ID
 	err := Write(*c)
 	if err != nil {
 		return fmt.Errorf("%w", err)
@@ -35,29 +42,28 @@ func Write(cfg Config) error {
 	path, _ := os.UserHomeDir()
 	data, err := json.Marshal(cfg)
 	if err != nil {
-		return fmt.Errorf("Error writing config")
+		return fmt.Errorf("%w", err)
 	}
 	if err := os.WriteFile(path+configpath, data, 0644); err != nil {
-		return fmt.Errorf("Error writing config file.")
+		return fmt.Errorf("%w", err)
 	}
 	return nil
 }
 
-func Read() Config {
+func LoadConfig() (Config, error) {
 	conf := Config{}
 	path, err := os.UserHomeDir()
 	if err != nil {
-		log.Fatal("Couldn't find user's home directory")
+		return conf, fmt.Errorf("%w", err)
 	}
 	data, err := os.ReadFile(path + configpath)
-	if err != nil {
-		_, err := os.Create(path + configpath)
-		if err != nil {
-			log.Fatal("failure to create config file")
+	if os.IsNotExist(err) {
+		if err := Write(conf); err != nil {
+			return conf, fmt.Errorf("%w", err)
 		}
 	}
 	if err := json.Unmarshal(data, &conf); err != nil {
-		log.Fatal(err)
+		return conf, fmt.Errorf("%w", err)
 	}
-	return conf
+	return conf, nil
 }

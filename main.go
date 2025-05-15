@@ -15,7 +15,10 @@ func main() {
 		log.Fatal("error no command given")
 	}
 	state := config.State{}
-	conf := config.Read()
+	conf, err := config.LoadConfig()
+	if err != nil {
+		log.Fatal(err)
+	}
 	state.Config = &conf
 	db, err := sql.Open("postgres", state.Config.Dburl)
 	if err != nil {
@@ -33,6 +36,6 @@ func main() {
 			log.Fatal(err)
 		}
 	} else {
-		log.Fatal("No given parameters")
+		log.Fatal("Unknown command")
 	}
 }
