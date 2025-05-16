@@ -215,7 +215,7 @@ func HandlerUnfollow(s *config.State, cmd Command, user database.User) error {
 	return nil
 }
 
-func printNextFeed(s *config.State, user database.User) error {
+func saveNextFeed(s *config.State, user database.User) error {
 	feed, err := s.Db.GetNextFeedToFetch(context.Background(), user.ID)
 	if err != nil {
 		return ProcessError(err)
@@ -231,7 +231,6 @@ func printNextFeed(s *config.State, user database.User) error {
 	for _, v := range actualFeed.Channel.Item {
 		fmt.Printf("%s\n", v.Title)
 	}
-	fmt.Println("\n\n")
 	return nil
 }
 
@@ -245,7 +244,7 @@ func HandlerAgg(s *config.State, cmd Command, user database.User) error {
 	}
 	ticker := time.NewTicker(duration)
 	for ; ; <-ticker.C {
-		err := printNextFeed(s, user)
+		err := saveNextFeed(s, user)
 		if err != nil {
 			return ProcessError(err)
 		}
