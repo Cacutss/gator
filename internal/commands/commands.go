@@ -69,10 +69,8 @@ func HandlerRegister(s *config.State, cmd Command) error {
 		return fmt.Errorf("Error given no parameters")
 	}
 	params := database.CreateUserParams{
-		ID:        uuid.New(),
-		CreatedAt: time.Now(),
-		UpdatedAt: time.Now(),
-		Name:      cmd.Args[1],
+		ID:   uuid.New(),
+		Name: cmd.Args[1],
 	}
 	user, err := s.Db.CreateUser(context.Background(), params)
 	if err != nil {
@@ -113,15 +111,6 @@ func HandlerUsers(s *config.State, cmd Command) error {
 	return nil
 }
 
-func HandlerAgg(s *config.State, cmd Command) error {
-	feed, err := RSS.FetchFeed(context.Background(), "https://www.wagslane.dev/index.xml")
-	if err != nil {
-		return ProcessError(err)
-	}
-	fmt.Println(feed)
-	return nil
-}
-
 func middleWareLoggedIn(handler func(s *config.State, cmd Command, user database.User) error) func(*config.State, Command) error {
 	return func(s *config.State, cmd Command) error {
 		user, err := s.Db.GetUserById(context.Background(), s.Config.User.ID)
@@ -137,23 +126,19 @@ func HandlerAddfeed(s *config.State, cmd Command, user database.User) error {
 		return fmt.Errorf("addfeed needs 2 arguments, got less than expected")
 	}
 	params := database.CreateFeedParams{
-		ID:        uuid.New(),
-		CreatedAt: time.Now(),
-		UpdatedAt: time.Now(),
-		Name:      cmd.Args[1],
-		Url:       cmd.Args[2],
-		UserID:    user.ID,
+		ID:     uuid.New(),
+		Name:   cmd.Args[1],
+		Url:    cmd.Args[2],
+		UserID: user.ID,
 	}
 	feed, err := s.Db.CreateFeed(context.Background(), params)
 	if err != nil {
 		return ProcessError(err)
 	}
 	followparams := database.CreateFeedFollowParams{
-		ID:        uuid.New(),
-		CreatedAt: time.Now(),
-		UpdatedAt: time.Now(),
-		UserID:    s.Config.User.ID,
-		FeedID:    feed.ID,
+		ID:     uuid.New(),
+		UserID: s.Config.User.ID,
+		FeedID: feed.ID,
 	}
 	_, err = s.Db.CreateFeedFollow(context.Background(), followparams)
 	if err != nil {
@@ -186,11 +171,9 @@ func HandlerFollow(s *config.State, cmd Command, user database.User) error {
 		return ProcessError(err)
 	}
 	params := database.CreateFeedFollowParams{
-		ID:        uuid.New(),
-		CreatedAt: time.Now(),
-		UpdatedAt: time.Now(),
-		UserID:    user.ID,
-		FeedID:    feed.ID,
+		ID:     uuid.New(),
+		UserID: user.ID,
+		FeedID: feed.ID,
 	}
 	feeds_follow, err := s.Db.CreateFeedFollow(context.Background(), params)
 	if err != nil {
@@ -212,6 +195,63 @@ func HandlerFollowing(s *config.State, cmd Command, user database.User) error {
 	return nil
 }
 
+func HandlerUnfollow(s *config.State, cmd Command, user database.User) error {
+	if len(cmd.Args) < 2 {
+		return fmt.Errorf("Expected url argument, got none")
+	}
+	feed, err := s.Db.GetFeedByUrl(context.Background(), cmd.Args[1])
+	if err != nil {
+		return ProcessError(err)
+	}
+	params := database.DeleteFollowParams{
+		UserID: user.ID,
+		FeedID: feed.ID,
+	}
+	err = s.Db.DeleteFollow(context.Background(), params)
+	if err != nil {
+		return ProcessError(err)
+	}
+	fmt.Printf("User %s unfollowed feed %s\n", user.Name, feed.Name)
+	return nil
+}
+
+func printNextFeed(s *config.State, user database.User) error {
+	feed, err := s.Db.GetNextFeedToFetch(context.Background(), user.ID)
+	if err != nil {
+		return ProcessError(err)
+	}
+	err = s.Db.MarkFeedFetched(context.Background(), feed.ID)
+	if err != nil {
+		return ProcessError(err)
+	}
+	actualFeed, err := RSS.FetchFeed(context.Background(), feed.Url)
+	if err != nil {
+		return ProcessError(err)
+	}
+	for _, v := range actualFeed.Channel.Item {
+		fmt.Printf("%s\n", v.Title)
+	}
+	fmt.Println("\n\n")
+	return nil
+}
+
+func HandlerAgg(s *config.State, cmd Command, user database.User) error {
+	if len(cmd.Args) < 2 {
+		return fmt.Errorf("Not enough arguments, expected TimeInterval, ex: 1m")
+	}
+	duration, err := time.ParseDuration(cmd.Args[1])
+	if err != nil {
+		return fmt.Errorf("Error not a valid duration")
+	}
+	ticker := time.NewTicker(duration)
+	for ; ; <-ticker.C {
+		err := printNextFeed(s, user)
+		if err != nil {
+			return ProcessError(err)
+		}
+	}
+}
+
 func (c *Commands) register(name string, handler func(*config.State, Command) error) {
 	c.Handler[name] = handler
 }
@@ -224,10 +264,11 @@ func GetCommands() Commands {
 	Result.register("register", HandlerRegister)
 	Result.register("reset", HandlerReset)
 	Result.register("users", HandlerUsers)
-	Result.register("agg", HandlerAgg)
 	Result.register("addfeed", middleWareLoggedIn(HandlerAddfeed))
 	Result.register("feeds", HandlerFeeds)
 	Result.register("follow", middleWareLoggedIn(HandlerFollow))
 	Result.register("following", middleWareLoggedIn(HandlerFollowing))
+	Result.register("unfollow", middleWareLoggedIn(HandlerUnfollow))
+	Result.register("agg", middleWareLoggedIn(HandlerAgg))
 	return Result
 }

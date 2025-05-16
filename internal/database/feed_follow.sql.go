@@ -16,10 +16,10 @@ const createFeedFollow = `-- name: CreateFeedFollow :one
 WITH inserted AS
     (INSERT INTO feed_follows(id,created_at,updated_at,user_id,feed_id) VALUES(
         $1,
+        NOW(),
+        NOW(),
         $2,
-        $3,
-        $4,
-        $5
+        $3
     )RETURNING id, created_at, updated_at, user_id, feed_id
 ),
 inserted_user AS(
@@ -32,11 +32,9 @@ INNER JOIN feeds ON inserted_user.feed_id = feeds.id
 `
 
 type CreateFeedFollowParams struct {
-	ID        uuid.UUID
-	CreatedAt time.Time
-	UpdatedAt time.Time
-	UserID    uuid.UUID
-	FeedID    uuid.UUID
+	ID     uuid.UUID
+	UserID uuid.UUID
+	FeedID uuid.UUID
 }
 
 type CreateFeedFollowRow struct {
@@ -50,13 +48,7 @@ type CreateFeedFollowRow struct {
 }
 
 func (q *Queries) CreateFeedFollow(ctx context.Context, arg CreateFeedFollowParams) (CreateFeedFollowRow, error) {
-	row := q.db.QueryRowContext(ctx, createFeedFollow,
-		arg.ID,
-		arg.CreatedAt,
-		arg.UpdatedAt,
-		arg.UserID,
-		arg.FeedID,
-	)
+	row := q.db.QueryRowContext(ctx, createFeedFollow, arg.ID, arg.UserID, arg.FeedID)
 	var i CreateFeedFollowRow
 	err := row.Scan(
 		&i.ID,
@@ -70,11 +62,25 @@ func (q *Queries) CreateFeedFollow(ctx context.Context, arg CreateFeedFollowPara
 	return i, err
 }
 
+const deleteFollow = `-- name: DeleteFollow :exec
+DELETE FROM feed_follows WHERE user_id = $1 AND feed_id = $2
+`
+
+type DeleteFollowParams struct {
+	UserID uuid.UUID
+	FeedID uuid.UUID
+}
+
+func (q *Queries) DeleteFollow(ctx context.Context, arg DeleteFollowParams) error {
+	_, err := q.db.ExecContext(ctx, deleteFollow, arg.UserID, arg.FeedID)
+	return err
+}
+
 const getFollowedFeeds = `-- name: GetFollowedFeeds :many
 WITH follows AS(
     SELECT id, created_at, updated_at, user_id, feed_id FROM feed_follows WHERE feed_follows.user_id = $1
 )
-SELECT feeds.id, feeds.created_at, feeds.updated_at, feeds.name, feeds.url, feeds.user_id FROM follows INNER JOIN feeds ON follows.feed_id = feeds.id
+SELECT feeds.id, feeds.created_at, feeds.updated_at, feeds.name, feeds.url, feeds.user_id, feeds.last_fetched_at FROM follows INNER JOIN feeds ON follows.feed_id = feeds.id
 `
 
 func (q *Queries) GetFollowedFeeds(ctx context.Context, userID uuid.UUID) ([]Feed, error) {
@@ -93,6 +99,7 @@ func (q *Queries) GetFollowedFeeds(ctx context.Context, userID uuid.UUID) ([]Fee
 			&i.Name,
 			&i.Url,
 			&i.UserID,
+			&i.LastFetchedAt,
 		); err != nil {
 			return nil, err
 		}
