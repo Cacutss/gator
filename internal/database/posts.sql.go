@@ -21,8 +21,8 @@ VALUES (
     $2,
     $3,
     $4,
-    NOW(),
-    $5
+    $5,
+    $6
 )
 RETURNING id, created_at, updated_at, title, url, description, published_at, feed_id
 `
@@ -32,6 +32,7 @@ type CreatePostParams struct {
 	Title       string
 	Url         string
 	Description sql.NullString
+	PublishedAt sql.NullTime
 	FeedID      uuid.NullUUID
 }
 
@@ -41,6 +42,7 @@ func (q *Queries) CreatePost(ctx context.Context, arg CreatePostParams) (Post, e
 		arg.Title,
 		arg.Url,
 		arg.Description,
+		arg.PublishedAt,
 		arg.FeedID,
 	)
 	var i Post

@@ -7,6 +7,7 @@ import (
 	"html"
 	"io"
 	"net/http"
+	"time"
 )
 
 type RSSFeed struct {
@@ -19,10 +20,10 @@ type RSSFeed struct {
 }
 
 type RSSItem struct {
-	Title       string `xml:"title"`
-	Link        string `xml:"link"`
-	Description string `xml:"description"`
-	PubDate     string `xml:"pubDate"`
+	Title       *string `xml:"title"`
+	Link        *string `xml:"link"`
+	Description *string `xml:"description"`
+	PubDate     *string `xml:"pubDate"`
 }
 
 func FetchFeed(ctx context.Context, feedURL string) (*RSSFeed, error) {
@@ -45,8 +46,34 @@ func FetchFeed(ctx context.Context, feedURL string) (*RSSFeed, error) {
 	feed.Channel.Description = html.UnescapeString(feed.Channel.Description)
 	feed.Channel.Title = html.UnescapeString(feed.Channel.Title)
 	for _, v := range feed.Channel.Item {
-		v.Description = html.UnescapeString(v.Description)
-		v.Title = html.UnescapeString(v.Title)
+		*v.Description = html.UnescapeString(*v.Description)
+		*v.Title = html.UnescapeString(*v.Title)
 	}
 	return &feed, nil
+}
+
+func ConvertDate(date *string) (time.Time, error) {
+	if date == nil {
+		return time.Time{}, fmt.Errorf("Date is missing")
+	}
+	formats := []string{
+		time.RFC822,
+		time.RFC822Z,
+		time.RFC1123,
+		time.RFC1123Z,
+		time.UnixDate,
+		time.ANSIC,
+		time.RFC850,
+		time.RFC3339,
+		time.RFC3339Nano,
+	}
+	var err error
+	result := time.Time{}
+	for _, format := range formats {
+		result, err := time.Parse(format, *date)
+		if err == nil {
+			return result, nil
+		}
+	}
+	return result, fmt.Errorf("Could not parse date %q: %w", *date, err)
 }

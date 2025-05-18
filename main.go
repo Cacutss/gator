@@ -8,12 +8,22 @@ import (
 	_ "github.com/lib/pq"
 	"log"
 	"os"
+	"strings"
 )
+
+func parseArgs(args []string) []string {
+	result := []string{}
+	for _, v := range args {
+		result = append(result, strings.Trim(v, "\""))
+	}
+	return result
+}
 
 func main() {
 	if len(os.Args) < 2 {
 		log.Fatal("error no command given")
 	}
+	args := parseArgs(os.Args)
 	state := config.State{}
 	conf, err := config.LoadConfig()
 	if err != nil {
@@ -28,10 +38,10 @@ func main() {
 	state.Db = dbQueries
 	Commands := commands.GetCommands()
 	command := commands.Command{
-		Name: os.Args[1],
-		Args: os.Args[1:],
+		Name: args[1],
+		Args: args[1:],
 	}
-	if h, ok := Commands.Handler[os.Args[1]]; ok {
+	if h, ok := Commands.Handler[args[1]]; ok {
 		if err := h(&state, command); err != nil {
 			log.Fatal(err)
 		}

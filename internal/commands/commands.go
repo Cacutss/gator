@@ -11,6 +11,7 @@ import (
 	"github.com/google/uuid"
 	pq "github.com/lib/pq"
 	"os"
+	"strconv"
 	"time"
 )
 
@@ -44,6 +45,18 @@ type Command struct {
 
 type Commands struct {
 	Handler map[string]func(*config.State, Command) error
+}
+
+func HandlerSetdb(s *config.State, cmd Command) error {
+	if len(cmd.Args) < 2 {
+		return fmt.Errorf("Need a database url")
+	}
+	s.Config.Dburl = cmd.Args[1]
+	err := config.Write(*s.Config)
+	if err != nil {
+		return ProcessError(err)
+	}
+	return nil
 }
 
 func HandlerLogin(s *config.State, cmd Command) error {
@@ -229,7 +242,49 @@ func saveNextFeed(s *config.State, user database.User) error {
 		return ProcessError(err)
 	}
 	for _, v := range actualFeed.Channel.Item {
-		fmt.Printf("%s\n", v.Title)
+		if v.Link == nil {
+			continue
+		}
+		publishDate, _ := RSS.ConvertDate(v.PubDate)
+		pbdate := sql.NullTime{
+			Time:  publishDate,
+			Valid: true,
+		}
+		if publishDate.IsZero() {
+			pbdate.Valid = false
+		}
+		desc := sql.NullString{}
+		if v.Description != nil {
+			desc.String = *v.Description
+			desc.Valid = true
+		}
+		var title string
+		if v.Title == nil {
+			title = "NoTitle"
+		} else {
+			title = *v.Title
+		}
+		feedid := uuid.NullUUID{
+			UUID:  feed.ID,
+			Valid: true,
+		}
+		post := database.CreatePostParams{
+			ID:          uuid.New(),
+			Title:       title,
+			Url:         *v.Link,
+			Description: desc,
+			PublishedAt: pbdate,
+			FeedID:      feedid,
+		}
+		_, err := s.Db.CreatePost(context.Background(), post)
+		if err != nil {
+			if pqErr, ok := err.(*pq.Error); ok && pqErr.Code == "23505" {
+				continue
+			}
+			fmt.Printf("Error when saving post %s: %v\n", title, err)
+			continue
+		}
+		fmt.Printf("Successfully fetched post: %s\n", title)
 	}
 	return nil
 }
@@ -246,9 +301,40 @@ func HandlerAgg(s *config.State, cmd Command, user database.User) error {
 	for ; ; <-ticker.C {
 		err := saveNextFeed(s, user)
 		if err != nil {
-			return ProcessError(err)
+			fmt.Printf("%v", err)
 		}
 	}
+}
+
+func HandlerBrowse(s *config.State, cmd Command, user database.User) error {
+	limit := 2
+	if len(cmd.Args) > 1 {
+		var err error
+		limit, err = strconv.Atoi(cmd.Args[1])
+		if err != nil {
+			return fmt.Errorf("Invalid limit")
+		}
+		if limit < 1 {
+			return fmt.Errorf("Limit must be at least 1")
+		}
+	}
+	params := database.GetPostsForUserParams{
+		UserID: user.ID,
+		Limit:  int32(limit),
+	}
+	posts, err := s.Db.GetPostsForUser(context.Background(), params)
+	if err != nil {
+		return ProcessError(err)
+	}
+	for _, v := range posts {
+		date := v.PublishedAt.Time.Format("01-01-0001")
+		fmt.Printf("%s, date:%s\n", v.Title, date)
+		if v.Description.Valid {
+			fmt.Printf("%s\n", v.Description.String)
+		}
+		fmt.Println("-------------------------")
+	}
+	return nil
 }
 
 func (c *Commands) register(name string, handler func(*config.State, Command) error) {
@@ -259,6 +345,7 @@ func GetCommands() Commands {
 	Result := Commands{
 		Handler: make(map[string]func(*config.State, Command) error),
 	}
+	Result.register("setdb", HandlerSetdb)
 	Result.register("login", HandlerLogin)
 	Result.register("register", HandlerRegister)
 	Result.register("reset", HandlerReset)
@@ -269,5 +356,6 @@ func GetCommands() Commands {
 	Result.register("following", middleWareLoggedIn(HandlerFollowing))
 	Result.register("unfollow", middleWareLoggedIn(HandlerUnfollow))
 	Result.register("agg", middleWareLoggedIn(HandlerAgg))
+	Result.register("browse", middleWareLoggedIn(HandlerBrowse))
 	return Result
 }

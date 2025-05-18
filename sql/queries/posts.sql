@@ -7,8 +7,8 @@ VALUES (
     $2,
     $3,
     $4,
-    NOW(),
-    $5
+    $5,
+    $6
 )
 RETURNING *;
 
