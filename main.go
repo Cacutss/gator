@@ -2,6 +2,7 @@ package main
 
 import (
 	"database/sql"
+	"fmt"
 	commands "github.com/Cacutss/gator/internal/commands"
 	config "github.com/Cacutss/gator/internal/config"
 	database "github.com/Cacutss/gator/internal/database"
@@ -21,7 +22,8 @@ func parseArgs(args []string) []string {
 
 func main() {
 	if len(os.Args) < 2 {
-		log.Fatal("error no command given")
+		fmt.Println("Version 1.0.0")
+		return
 	}
 	args := parseArgs(os.Args)
 	state := config.State{}
