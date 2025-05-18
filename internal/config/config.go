@@ -3,7 +3,7 @@ package config
 import (
 	"encoding/json"
 	"fmt"
-	database "github.com/Cacutss/blog-aggregator/internal/database"
+	database "github.com/Cacutss/gator/internal/database"
 	"github.com/google/uuid"
 	"os"
 )

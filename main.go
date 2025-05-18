@@ -2,9 +2,9 @@ package main
 
 import (
 	"database/sql"
-	commands "github.com/Cacutss/blog-aggregator/internal/commands"
-	config "github.com/Cacutss/blog-aggregator/internal/config"
-	database "github.com/Cacutss/blog-aggregator/internal/database"
+	commands "github.com/Cacutss/gator/internal/commands"
+	config "github.com/Cacutss/gator/internal/config"
+	database "github.com/Cacutss/gator/internal/database"
 	_ "github.com/lib/pq"
 	"log"
 	"os"

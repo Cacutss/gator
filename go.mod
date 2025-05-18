@@ -1,4 +1,4 @@
-module github.com/Cacutss/blog-aggregator
+module github.com/Cacutss/gator
 
 go 1.24.2
 
