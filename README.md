@@ -2,6 +2,7 @@
 Gator is an rss fetcher that brings you posts from your favorite feeds on the warm embrace of your terminal.
 ![gatorlogo](https://github.com/user-attachments/assets/e6ca413d-d33f-41bd-bf3b-7f83a9bbc835)
 ## Requirements:
+## Go:
 You will need Go 1.2 or later, You can install Golang with webi or [Follow the official install instructions](https://go.dev/doc/install).
 ### Windows:
 ```
@@ -12,15 +13,17 @@ curl.exe https://webi.ms/golang | powershell
 curl -sS https://webi.sh/golang | sh; \
 source ~/.config/envman/PATH.env
 ```
+## Postgresql:
 Now that you have go the next requirement would be postgresql to store your feeds and posts,they have a nice install guide on their page:
 ### [Download postgresql](https://www.postgresql.org/download/linux/ubuntu/)
+## Goose:
 And for the last requirement there's [goose](https://github.com/pressly/goose) this shouldn't be a requirement but im kinda lazy, maybe next time i will use it to build the database itself, the thing is you download it with go:
 ```
 go install https://github.com/pressly/goose
 ```
 and i will explain how to use it in the setup process.
 ## Installing:
-### To install gator you have to use the go package manager:
+### To install gator you have to use go install:
 ```
 go install github.com/Cacutss/gator
 ```
