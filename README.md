@@ -59,15 +59,15 @@ gator setdb <your db url>
 Once done you are ready to use gator!
 I'll leave some commands and descriptions here so you can start using it:
 ## Commands:
-* "gator register <username>" registers your user and logs you in
-* "gator login <username>" logs in as that username
-* "gator addfeed <feedname> <url>" adds a feed to the database and makes you follow it (following makes you able to get that feed post's)
+* "gator register \<username\>" registers your user and logs you in
+* "gator login \<username\>" logs in as that username
+* "gator addfeed \<feedname\> \<url\>" adds a feed to the database and makes you follow it (following makes you able to get that feed post's)
 * "gator feeds" shows you a list of the feeds and who added them.
-* "gator follow <url>" makes the current logged in user follow a feed.
+* "gator follow \<url\>" makes the current logged in user follow a feed.
 * "gator following" shows you a list of the feeds you are currently following.
-* "gator unfollow <url>" Unfollows that feed.
+* "gator unfollow \<url\>" Unfollows that feed.
 * "gator users" shows you a list of all the users and marks whoever is logged in at the moment.
-* "gator agg <time>" first of all time can be as an example: ("10s") == 10 seconds, or ("3m10s") = 3 minutes 10 seconds, yada yada. The point is it searchs for posts within the feeds in <time> interval.
-* "gator browse <number>" shows you up to <number> posts.
+* "gator agg \<time\>" first of all time can be as an example: ("10s") == 10 seconds, or ("3m10s") = 3 minutes 10 seconds, yada yada. The point is it searchs for posts within the feeds in \<time\> interval.
+* "gator browse \<number\>" shows you up to <number> posts.
 * "gator reset" SHOULD NOT BE USED IN NORMAL CIRCUNSTANCES, removes all users.
 Hope the quality is at least acceptable 
