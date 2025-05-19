@@ -1,5 +1,6 @@
 # Gator<br>
 Gator is an rss fetcher that brings you posts from your favorite feeds on the warm embrace of your terminal.
+Gator is also not an original software, as the premise for it is given in [Boot.dev](boot.dev) as a guided project.
 ![gatorlogo](https://github.com/user-attachments/assets/e6ca413d-d33f-41bd-bf3b-7f83a9bbc835)
 ## Requirements:
 ## Go:
